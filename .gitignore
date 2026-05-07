@@ -5,6 +5,7 @@ __pycache__/
 .mypy_cache/
 build/
 dist/
+installer-dist/
 *.spec
 *.db
 *.db-shm

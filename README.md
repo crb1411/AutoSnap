@@ -15,7 +15,18 @@ This repository currently contains a Windows-first v0 implemented in Python/Tkin
 - Provides a local Tkinter UI for timeline browsing and keyword search.
 - Optional OpenAI vision annotation via BYOK. If no API key is configured, the app still works as a clean local screenshot archive.
 
-## Windows Quick Start
+## Windows Install Package
+
+The normal user path is a Windows installer:
+
+1. Open the repository releases: <https://github.com/crb1411/AutoSnap/releases>
+2. Download `AutoSnap-Setup.exe`.
+3. Double-click it and keep the default options.
+4. Launch AutoSnap, click **Start watching**, then take screenshots as usual.
+
+The installer is built by GitHub Actions from this repository on Windows. Every push to `main` also uploads `AutoSnap-Setup.exe` as a workflow artifact under **Actions -> Build Windows Installer**. Version tags such as `v0.1.0` publish the installer to GitHub Releases.
+
+## Windows Developer Quick Start
 
 1. Install Python 3.11+ from <https://www.python.org/downloads/windows/> and tick **Add python.exe to PATH**.
 2. Double-click `scripts\windows_install.bat`.
@@ -66,10 +77,10 @@ Run tests:
 python -m unittest discover -s tests
 ```
 
-Build a Windows exe:
+Build a Windows installer locally:
 
 ```bat
-scripts\windows_build_exe.bat
+scripts\windows_build_installer.bat
 ```
 
-The exe build uses PyInstaller and is intended as a convenience artifact for v0 testing. The long-term product design still targets a signed native installer.
+This requires Inno Setup on `PATH`. The output is `installer-dist\AutoSnap-Setup.exe`.

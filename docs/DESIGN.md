@@ -49,16 +49,29 @@
 
 ### 0A.4 Windows 运行方式
 
+普通用户优先下载 GitHub Release 里的安装包：
+
+```text
+https://github.com/crb1411/AutoSnap/releases
+AutoSnap-Setup.exe
+```
+
+仓库已经包含 GitHub Actions：`Build Windows Installer`。每次推送 `main` 会产出 Actions artifact；推送 `v*` tag 会把 `AutoSnap-Setup.exe` 挂到 GitHub Release。
+
+开发者本地运行：
+
 ```bat
 scripts\windows_install.bat
 scripts\windows_run.bat
 ```
 
-可选打包 exe：
+Windows 本地打包安装器：
 
 ```bat
-scripts\windows_build_exe.bat
+scripts\windows_build_installer.bat
 ```
+
+本地打包要求安装 Inno Setup，并确保 `iscc.exe` 在 `PATH` 中。
 
 ### 0A.5 v0 验收口径
 
