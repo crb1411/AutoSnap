@@ -1,5 +1,7 @@
 # AutoSnap
 
+> 中文用户请看 [README.zh-CN.md](README.zh-CN.md) ｜ 安装指南：[docs/INSTALL.zh-CN.md](docs/INSTALL.zh-CN.md)
+
 AutoSnap is an open-source screenshot archiver. It does not replace your system screenshot shortcuts. It watches normal screenshot folders and the clipboard, copies new screenshots into a predictable archive, indexes them in SQLite, and lets you search them later.
 
 This repository currently contains a Windows-first v0 implemented in Python/Tkinter so it can run with a small dependency set before the native Tauri app is built.
