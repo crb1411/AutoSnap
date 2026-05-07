@@ -20,12 +20,10 @@ rmdir /s /q installer-dist 2>nul
 if errorlevel 1 exit /b 1
 
 echo Building bootstrap installer...
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onefile --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
 if errorlevel 1 exit /b 1
 
-mkdir installer-dist 2>nul
-copy /y dist\AutoSnap-Setup.exe installer-dist\AutoSnap-Setup.exe
-if errorlevel 1 exit /b 1
+if not exist installer-dist\AutoSnap-Setup.exe exit /b 1
 
 echo.
 echo Installer built: installer-dist\AutoSnap-Setup.exe

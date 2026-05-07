@@ -57,20 +57,21 @@ jobs:
           conda activate app
           rmdir /s /q installer-dist 2>nul
           mkdir installer-dist
-          python -m PyInstaller --noconfirm --windowed --onefile --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
-          copy dist\AutoSnap-Setup.exe installer-dist\AutoSnap-Setup.exe
+          python -m PyInstaller --noconfirm --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
+          if not exist installer-dist\AutoSnap-Setup.exe exit /b 1
+          dir installer-dist
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: AutoSnap-Windows-Installer
-          path: installer-dist\AutoSnap-Setup.exe
+          path: installer-dist/AutoSnap-Setup.exe
           if-no-files-found: warn
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: installer-dist\AutoSnap-Setup.exe
+          files: installer-dist/AutoSnap-Setup.exe
           generate_release_notes: true
