@@ -26,8 +26,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-iscc installer\AutoSnap.iss
-if errorlevel 1 exit /b 1
+pushd installer
+iscc AutoSnap.iss
+set ISCC_EXIT=%ERRORLEVEL%
+popd
+if not "%ISCC_EXIT%"=="0" exit /b %ISCC_EXIT%
 
 echo.
 echo Installer built: installer-dist\AutoSnap-Setup.exe

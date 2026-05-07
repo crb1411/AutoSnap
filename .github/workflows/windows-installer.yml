@@ -66,9 +66,12 @@ jobs:
             Write-Error "ISCC.exe was not found after installing Inno Setup."
             exit 1
           }
-          & $iscc installer\AutoSnap.iss
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
+          Push-Location installer
+          & $iscc AutoSnap.iss
+          $isccExit = $LASTEXITCODE
+          Pop-Location
+          if ($isccExit -ne 0) {
+            exit $isccExit
           }
           Get-ChildItem installer-dist
 
