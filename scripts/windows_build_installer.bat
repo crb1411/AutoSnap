@@ -19,18 +19,18 @@ rmdir /s /q installer-dist 2>nul
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
 if errorlevel 1 exit /b 1
 
-where iscc >nul 2>nul
+where makensis >nul 2>nul
 if errorlevel 1 (
-  echo Inno Setup compiler is not installed or not on PATH.
-  echo Download it from https://jrsoftware.org/isdl.php, then rerun this script.
+  echo NSIS makensis is not installed or not on PATH.
+  echo Download it from https://nsis.sourceforge.io/Download, then rerun this script.
   exit /b 1
 )
 
 pushd installer
-iscc AutoSnap.iss
-set ISCC_EXIT=%ERRORLEVEL%
+makensis AutoSnap.nsi
+set INSTALLER_EXIT=%ERRORLEVEL%
 popd
-if not "%ISCC_EXIT%"=="0" exit /b %ISCC_EXIT%
+if not "%INSTALLER_EXIT%"=="0" exit /b %INSTALLER_EXIT%
 
 echo.
 echo Installer built: installer-dist\AutoSnap-Setup.exe

@@ -51,27 +51,27 @@ jobs:
           rmdir /s /q dist 2>nul
           python -m PyInstaller --noconfirm --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
 
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
 
       - name: Build installer
         run: |
           New-Item -ItemType Directory -Force installer-dist | Out-Null
-          $isccCandidates = @(
-            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          $makensisCandidates = @(
+            "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
+            "${env:ProgramFiles}\NSIS\makensis.exe"
           )
-          $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $iscc) {
-            Write-Error "ISCC.exe was not found after installing Inno Setup."
+          $makensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $makensis) {
+            Write-Error "makensis.exe was not found after installing NSIS."
             exit 1
           }
           Push-Location installer
-          & $iscc AutoSnap.iss
-          $isccExit = $LASTEXITCODE
+          & $makensis "/DAPP_VERSION=$env:AUTOSNAP_VERSION" AutoSnap.nsi
+          $installerExit = $LASTEXITCODE
           Pop-Location
-          if ($isccExit -ne 0) {
-            exit $isccExit
+          if ($installerExit -ne 0) {
+            exit $installerExit
           }
           Get-ChildItem installer-dist
 

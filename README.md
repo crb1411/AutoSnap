@@ -83,4 +83,4 @@ Build a Windows installer locally:
 scripts\windows_build_installer.bat
 ```
 
-This requires Inno Setup on `PATH`. The output is `installer-dist\AutoSnap-Setup.exe`.
+This requires NSIS `makensis` on `PATH`. The output is `installer-dist\AutoSnap-Setup.exe`.
