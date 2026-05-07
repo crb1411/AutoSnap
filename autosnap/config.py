@@ -41,9 +41,14 @@ class Settings:
     enable_clipboard: bool = True
     keep_originals: bool = True
     enable_ai: bool = False
+    openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
     poll_interval_sec: float = 1.5
     process_existing_on_start: bool = False
+    language: str = "zh_CN"
+    minimize_to_tray_on_close: bool = True
+    start_in_tray: bool = False
+    start_watching_on_launch: bool = False
 
     @classmethod
     def defaults(cls) -> "Settings":
@@ -52,6 +57,7 @@ class Settings:
             archive_dir=str(default_archive_dir()),
             watch_dirs=default_watch_dirs(),
             enable_ai=enable_ai,
+            openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
             openai_model=os.environ.get("AUTOSNAP_OPENAI_MODEL", "gpt-4.1-mini"),
         )
 

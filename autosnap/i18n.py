@@ -1,0 +1,193 @@
+from __future__ import annotations
+
+from typing import Dict
+
+
+SUPPORTED_LANGUAGES = ("zh_CN", "en")
+DEFAULT_LANGUAGE = "zh_CN"
+
+
+_TRANSLATIONS: Dict[str, Dict[str, str]] = {
+    "zh_CN": {
+        # Window / chrome
+        "app.title": "AutoSnap 截图归档",
+        "status.idle": "已停止",
+        "status.watching": "正在监听",
+        "status.ai_on": "AI 已开启",
+        "status.ai_off": "仅本地",
+        "status.archive_label": "归档目录",
+        "status.watch_label": "监听",
+        "status.no_watch": "暂无监听目录",
+        # Top bar
+        "btn.start": "开始监听",
+        "btn.stop": "停止",
+        "btn.import": "导入文件夹",
+        "btn.open_archive": "打开归档目录",
+        "btn.annotate_backlog": "AI 补标注",
+        "btn.settings": "设置",
+        "btn.refresh": "刷新",
+        "btn.minimize_to_tray": "最小化到托盘",
+        "search.label": "搜索",
+        "search.placeholder": "按标题 / 标签 / OCR 文字搜索…",
+        # Empty state
+        "empty.hint": "还没有截图。点「开始监听」，然后照常截图即可。",
+        # Context menu
+        "menu.copy_image": "复制图像",
+        "menu.copy_path": "复制路径",
+        "menu.open_image": "打开图像",
+        "menu.show_in_folder": "在文件夹中显示",
+        "menu.toggle_favorite": "标记/取消收藏",
+        "menu.delete": "从归档中删除",
+        # Toasts / status messages
+        "msg.archived": "已归档：{name}",
+        "msg.imported": "已从 {folder} 导入 {count} 张",
+        "msg.ai_done": "AI 标注完成：{count} 张",
+        "msg.ai_annotated": "AI 已标注：{name}",
+        "msg.copied_image": "已复制图像到剪贴板",
+        "msg.copied_path": "已复制路径：{path}",
+        "msg.copy_image_failed": "复制图像失败：{err}",
+        "msg.copy_image_unsupported": "复制图像在当前平台暂不支持，已复制路径代替",
+        "msg.deleted": "已删除：{name}",
+        "msg.delete_failed": "删除失败：{err}",
+        "msg.fav_set": "已收藏：{name}",
+        "msg.fav_unset": "取消收藏：{name}",
+        "msg.no_watch_dirs": "未配置监听目录。可用「导入文件夹」处理已有截图。",
+        "msg.ai_disabled": "未启用 AI。请在设置中填写 API Key 并勾选启用。",
+        "msg.tray_running": "AutoSnap 已最小化到系统托盘。",
+        "msg.confirm_delete": "确认删除这张截图？\n该操作会同时删除归档文件和数据库记录。",
+        # Tray
+        "tray.show": "显示主窗口",
+        "tray.start": "开始监听",
+        "tray.stop": "停止监听",
+        "tray.quit": "退出 AutoSnap",
+        "tray.tooltip_idle": "AutoSnap · 已停止",
+        "tray.tooltip_watching": "AutoSnap · 正在监听",
+        # Settings dialog
+        "settings.title": "AutoSnap 设置",
+        "settings.tab.general": "通用",
+        "settings.tab.watch": "监听",
+        "settings.tab.ai": "AI 标注",
+        "settings.tab.advanced": "高级",
+        "settings.archive_dir": "归档目录",
+        "settings.archive_dir.hint": "建议放到 OneDrive / iCloud 子目录以多设备同步。",
+        "settings.choose": "选择…",
+        "settings.language": "界面语言",
+        "settings.lang.zh": "中文（简体）",
+        "settings.lang.en": "English",
+        "settings.minimize_to_tray": "关闭主窗口时最小化到系统托盘（不退出程序）",
+        "settings.start_in_tray": "启动时直接最小化到托盘",
+        "settings.start_watching_on_launch": "启动后自动开始监听",
+        "settings.process_existing": "首次启动时处理监听目录里已有的图像",
+        "settings.watch_dirs": "监听目录列表",
+        "settings.add_dir": "添加目录…",
+        "settings.remove_dir": "移除选中",
+        "settings.enable_clipboard": "同时监听剪贴板（推荐：捕获 Win+Shift+S 截图）",
+        "settings.poll_interval": "轮询间隔（秒）",
+        "settings.enable_ai": "启用 AI 标注（自动给截图打标签 / 写标题）",
+        "settings.openai_key": "OpenAI API Key",
+        "settings.openai_key.hint": "存在本地配置文件，不会上传。也支持 OPENAI_API_KEY 环境变量。",
+        "settings.openai_model": "模型",
+        "settings.save": "保存",
+        "settings.cancel": "取消",
+        "settings.saved": "已保存。某些设置（如语言）需要重启 AutoSnap 才能完全生效。",
+    },
+    "en": {
+        "app.title": "AutoSnap",
+        "status.idle": "idle",
+        "status.watching": "watching",
+        "status.ai_on": "AI on",
+        "status.ai_off": "local only",
+        "status.archive_label": "archive",
+        "status.watch_label": "watch",
+        "status.no_watch": "no watch folders",
+        "btn.start": "Start watching",
+        "btn.stop": "Stop",
+        "btn.import": "Import folder",
+        "btn.open_archive": "Open archive",
+        "btn.annotate_backlog": "AI annotate backlog",
+        "btn.settings": "Settings",
+        "btn.refresh": "Refresh",
+        "btn.minimize_to_tray": "Minimize to tray",
+        "search.label": "Search",
+        "search.placeholder": "Search title / tag / OCR text…",
+        "empty.hint": "No screenshots yet. Click \"Start watching\", then take a screenshot.",
+        "menu.copy_image": "Copy image",
+        "menu.copy_path": "Copy file path",
+        "menu.open_image": "Open image",
+        "menu.show_in_folder": "Show in folder",
+        "menu.toggle_favorite": "Toggle favorite",
+        "menu.delete": "Delete from archive",
+        "msg.archived": "Archived {name}",
+        "msg.imported": "Imported {count} from {folder}",
+        "msg.ai_done": "AI annotation done: {count}",
+        "msg.ai_annotated": "AI annotated {name}",
+        "msg.copied_image": "Image copied to clipboard",
+        "msg.copied_path": "Path copied: {path}",
+        "msg.copy_image_failed": "Copy image failed: {err}",
+        "msg.copy_image_unsupported": "Image copy not supported on this platform; path copied instead",
+        "msg.deleted": "Deleted {name}",
+        "msg.delete_failed": "Delete failed: {err}",
+        "msg.fav_set": "Favorited {name}",
+        "msg.fav_unset": "Unfavorited {name}",
+        "msg.no_watch_dirs": "No watch folders configured. Use Import folder for existing screenshots.",
+        "msg.ai_disabled": "AI not enabled. Set an API key and enable AI in Settings.",
+        "msg.tray_running": "AutoSnap is now in the system tray.",
+        "msg.confirm_delete": "Delete this screenshot?\nThis removes both the archived file and its database record.",
+        "tray.show": "Show window",
+        "tray.start": "Start watching",
+        "tray.stop": "Stop watching",
+        "tray.quit": "Quit AutoSnap",
+        "tray.tooltip_idle": "AutoSnap · idle",
+        "tray.tooltip_watching": "AutoSnap · watching",
+        "settings.title": "AutoSnap Settings",
+        "settings.tab.general": "General",
+        "settings.tab.watch": "Watching",
+        "settings.tab.ai": "AI",
+        "settings.tab.advanced": "Advanced",
+        "settings.archive_dir": "Archive directory",
+        "settings.archive_dir.hint": "Tip: place inside OneDrive/iCloud for multi-device sync.",
+        "settings.choose": "Choose…",
+        "settings.language": "Language",
+        "settings.lang.zh": "中文 (Simplified)",
+        "settings.lang.en": "English",
+        "settings.minimize_to_tray": "Minimize to system tray on close (do not quit)",
+        "settings.start_in_tray": "Start minimized to tray",
+        "settings.start_watching_on_launch": "Start watching automatically on launch",
+        "settings.process_existing": "Process existing images on first start",
+        "settings.watch_dirs": "Watch folders",
+        "settings.add_dir": "Add folder…",
+        "settings.remove_dir": "Remove selected",
+        "settings.enable_clipboard": "Also poll clipboard (recommended: catches Win+Shift+S)",
+        "settings.poll_interval": "Poll interval (sec)",
+        "settings.enable_ai": "Enable AI annotation",
+        "settings.openai_key": "OpenAI API Key",
+        "settings.openai_key.hint": "Stored locally only. OPENAI_API_KEY env var also works.",
+        "settings.openai_model": "Model",
+        "settings.save": "Save",
+        "settings.cancel": "Cancel",
+        "settings.saved": "Saved. Some changes (e.g. language) take effect after restart.",
+    },
+}
+
+
+class Translator:
+    def __init__(self, language: str = DEFAULT_LANGUAGE) -> None:
+        self.set_language(language)
+
+    def set_language(self, language: str) -> None:
+        if language not in SUPPORTED_LANGUAGES:
+            language = DEFAULT_LANGUAGE
+        self.language = language
+        self._table = _TRANSLATIONS[language]
+        self._fallback = _TRANSLATIONS[DEFAULT_LANGUAGE]
+
+    def t(self, key: str, **kwargs) -> str:
+        text = self._table.get(key) or self._fallback.get(key) or key
+        if kwargs:
+            try:
+                return text.format(**kwargs)
+            except (KeyError, IndexError):
+                return text
+        return text
+
+    __call__ = t

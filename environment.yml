@@ -10,3 +10,4 @@ dependencies:
   - requests
   - pip:
       - pyinstaller>=6.6,<7
+      - pystray>=0.19,<1

@@ -76,6 +76,9 @@ jobs:
             --noconfirm --clean --windowed --onedir `
             --name AutoSnap `
             --icon assets\autosnap.ico `
+            --add-data "assets\autosnap.ico;assets" `
+            --collect-submodules pystray `
+            --hidden-import pystray._win32 `
             --log-level INFO `
             autosnap_launcher.py
           $rc = $LASTEXITCODE

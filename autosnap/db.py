@@ -233,6 +233,23 @@ class AutoSnapDB:
         self.conn.execute("UPDATE screenshots SET ai_status = 'failed' WHERE id = ?", (screenshot_id,))
         self.conn.commit()
 
+    def set_favorite(self, screenshot_id: str, value: bool) -> None:
+        self.conn.execute(
+            "UPDATE screenshots SET is_favorite = ? WHERE id = ?",
+            (1 if value else 0, screenshot_id),
+        )
+        self.conn.commit()
+
+    def delete_screenshot(self, screenshot_id: str) -> None:
+        self.conn.execute("DELETE FROM annotations WHERE screenshot_id = ?", (screenshot_id,))
+        if self._fts_available:
+            try:
+                self.conn.execute("DELETE FROM search_fts WHERE screenshot_id = ?", (screenshot_id,))
+            except sqlite3.OperationalError:
+                pass
+        self.conn.execute("DELETE FROM screenshots WHERE id = ?", (screenshot_id,))
+        self.conn.commit()
+
     def pending_ai(self, limit: int = 20) -> list[sqlite3.Row]:
         cur = self.conn.execute(
             """
