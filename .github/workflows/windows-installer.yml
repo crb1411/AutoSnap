@@ -12,22 +12,23 @@ permissions:
 jobs:
   windows-installer:
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: pwsh
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set version
+        id: ver
+        shell: pwsh
         run: |
           if ("${{ github.ref_type }}" -eq "tag") {
             $version = "${{ github.ref_name }}".TrimStart("v")
           } else {
-            $version = "0.1.0"
+            $version = "0.1.0+${{ github.run_number }}"
           }
           "AUTOSNAP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Building AutoSnap version: $version"
 
       - name: Set up conda env app
         uses: conda-incubator/setup-miniconda@v3
@@ -39,39 +40,105 @@ jobs:
       - name: Test
         shell: cmd /C CALL {0}
         run: |
-          conda activate app
-          python -m unittest discover -s tests
+          conda activate app || exit /b 1
+          python -m unittest discover -s tests || exit /b 1
 
-      - name: Build app with PyInstaller
+      - name: Build app payload (onedir)
         shell: cmd /C CALL {0}
         run: |
-          conda activate app
-          python scripts\create_icon.py
+          conda activate app || exit /b 1
+          python scripts\create_icon.py || exit /b 1
           rmdir /s /q build 2>nul
           rmdir /s /q dist 2>nul
-          python -m PyInstaller --noconfirm --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
+          del /q AutoSnap.spec 2>nul
+          del /q AutoSnap-Setup.spec 2>nul
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py || exit /b 1
 
-      - name: Build installer
+      - name: Verify app payload
+        shell: pwsh
+        run: |
+          $payload = "dist\AutoSnap"
+          if (-not (Test-Path "$payload\AutoSnap.exe")) {
+            Write-Host "::error::App payload missing: $payload\AutoSnap.exe"
+            if (Test-Path $payload) {
+              Write-Host "=== contents of $payload ==="
+              Get-ChildItem -Recurse $payload | Select-Object FullName, Length |
+                Format-Table -AutoSize | Out-String | Write-Host
+            }
+            exit 1
+          }
+          $size = [math]::Round(((Get-ChildItem -Recurse $payload | Measure-Object Length -Sum).Sum / 1MB), 1)
+          Write-Host "App payload OK: $payload\AutoSnap.exe (total $size MB)"
+
+      - name: Build bootstrap installer (onefile)
         shell: cmd /C CALL {0}
         run: |
-          conda activate app
+          conda activate app || exit /b 1
           rmdir /s /q installer-dist 2>nul
-          mkdir installer-dist
-          python -m PyInstaller --noconfirm --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
-          if not exist installer-dist\AutoSnap-Setup.exe exit /b 1
-          dir installer-dist
+          rmdir /s /q build\installer 2>nul
+          mkdir installer-dist || exit /b 1
+          del /q AutoSnap-Setup.spec 2>nul
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py || exit /b 1
+
+      - name: Locate and stage installer
+        id: locate
+        shell: pwsh
+        run: |
+          Write-Host "=== installer-dist tree ==="
+          if (Test-Path installer-dist) {
+            Get-ChildItem -Recurse installer-dist | Select-Object FullName, Length |
+              Format-Table -AutoSize | Out-String | Write-Host
+          } else {
+            Write-Host "installer-dist does not exist"
+          }
+
+          $expected = Join-Path (Get-Location) "installer-dist\AutoSnap-Setup.exe"
+          if (-not (Test-Path $expected)) {
+            Write-Host "::warning::Expected installer not at $expected; searching workspace..."
+            $candidates = Get-ChildItem -Path . -Filter AutoSnap-Setup.exe -Recurse -ErrorAction SilentlyContinue
+            Write-Host "=== AutoSnap-Setup.exe candidates ==="
+            $candidates | Select-Object FullName, Length | Format-Table -AutoSize | Out-String | Write-Host
+            $found = $candidates | Where-Object { $_.Length -gt 1MB } | Select-Object -First 1
+            if (-not $found) { $found = $candidates | Select-Object -First 1 }
+            if (-not $found) {
+              Write-Host "::error::AutoSnap-Setup.exe was not produced anywhere in the workspace"
+              exit 1
+            }
+            New-Item -ItemType Directory -Path "installer-dist" -Force | Out-Null
+            Copy-Item $found.FullName $expected -Force
+            Write-Host "Copied $($found.FullName) -> $expected"
+          }
+          $sizeBytes = (Get-Item $expected).Length
+          $sizeMB = [math]::Round($sizeBytes / 1MB, 1)
+          Write-Host "Final installer: $expected ($sizeMB MB / $sizeBytes bytes)"
+          if ($sizeBytes -lt 1MB) {
+            Write-Host "::error::Installer is suspiciously small ($sizeBytes bytes)"
+            exit 1
+          }
+          "path=$expected" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "size=$sizeBytes" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
-          name: AutoSnap-Windows-Installer
+          name: AutoSnap-Setup-${{ steps.ver.outputs.version }}
           path: installer-dist/AutoSnap-Setup.exe
-          if-no-files-found: warn
+          if-no-files-found: error
+
+      - name: Upload PyInstaller build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyinstaller-build-log-${{ github.run_id }}
+          path: |
+            build/**
+            installer-dist/**
+          if-no-files-found: ignore
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: installer-dist/AutoSnap-Setup.exe
+          fail_on_unmatched_files: true
           generate_release_notes: true
