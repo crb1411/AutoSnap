@@ -47,38 +47,62 @@ jobs:
         shell: cmd /C CALL {0}
         run: |
           conda activate app || exit /b 1
+          python -c "import sys; print('Python:', sys.executable); print('Version:', sys.version)" || exit /b 1
+          python -m PyInstaller --version || exit /b 1
           python scripts\create_icon.py || exit /b 1
+          if not exist assets\autosnap.ico (echo ::error::Icon was not created && exit /b 1)
           rmdir /s /q build 2>nul
           rmdir /s /q dist 2>nul
           del /q AutoSnap.spec 2>nul
           del /q AutoSnap-Setup.spec 2>nul
-          python -m PyInstaller --noconfirm --clean --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py || exit /b 1
+          python -m PyInstaller --noconfirm --clean --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
+          set PI_RC=%errorlevel%
+          echo PyInstaller stage 1 exited with code %PI_RC%
+          if not %PI_RC%==0 exit /b %PI_RC%
 
-      - name: Verify app payload
+      - name: Locate app payload
+        id: payload
         shell: pwsh
         run: |
-          $payload = "dist\AutoSnap"
-          if (-not (Test-Path "$payload\AutoSnap.exe")) {
-            Write-Host "::error::App payload missing: $payload\AutoSnap.exe"
-            if (Test-Path $payload) {
-              Write-Host "=== contents of $payload ==="
-              Get-ChildItem -Recurse $payload | Select-Object FullName, Length |
-                Format-Table -AutoSize | Out-String | Write-Host
-            }
+          Write-Host "=== full dist tree (top 200 entries) ==="
+          if (Test-Path dist) {
+            Get-ChildItem -Recurse dist -ErrorAction SilentlyContinue |
+              Select-Object -First 200 FullName, Length |
+              Format-Table -AutoSize | Out-String | Write-Host
+          } else {
+            Write-Host "::error::dist directory was not created by PyInstaller"
             exit 1
           }
-          $size = [math]::Round(((Get-ChildItem -Recurse $payload | Measure-Object Length -Sum).Sum / 1MB), 1)
-          Write-Host "App payload OK: $payload\AutoSnap.exe (total $size MB)"
+
+          $exe = Get-ChildItem -Path dist -Filter AutoSnap.exe -Recurse -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Length -gt 100KB } |
+                 Sort-Object Length -Descending | Select-Object -First 1
+          if (-not $exe) {
+            Write-Host "::error::No usable AutoSnap.exe (>100KB) found anywhere under dist/"
+            Write-Host "=== all AutoSnap*.exe under dist/ ==="
+            Get-ChildItem -Path dist -Filter "AutoSnap*.exe" -Recurse -ErrorAction SilentlyContinue |
+              Select-Object FullName, Length | Format-Table -AutoSize | Out-String | Write-Host
+            exit 1
+          }
+          $payloadRoot = $exe.Directory.FullName
+          $totalMB = [math]::Round(((Get-ChildItem -Recurse $payloadRoot -ErrorAction SilentlyContinue |
+                       Measure-Object Length -Sum).Sum / 1MB), 1)
+          Write-Host "App payload OK: $($exe.FullName) (bundle total $totalMB MB)"
+          Write-Host "Payload root for stage 2: $payloadRoot"
+          "payload_root=$payloadRoot" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Build bootstrap installer (onefile)
         shell: cmd /C CALL {0}
+        env:
+          PAYLOAD_ROOT: ${{ steps.payload.outputs.payload_root }}
         run: |
           conda activate app || exit /b 1
           rmdir /s /q installer-dist 2>nul
           rmdir /s /q build\installer 2>nul
           mkdir installer-dist || exit /b 1
           del /q AutoSnap-Setup.spec 2>nul
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py || exit /b 1
+          echo Using payload root: %PAYLOAD_ROOT%
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --distpath installer-dist --workpath build\installer --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "%PAYLOAD_ROOT%;payload\AutoSnap" installer\bootstrap.py || exit /b 1
 
       - name: Locate and stage installer
         id: locate
