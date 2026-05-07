@@ -51,29 +51,14 @@ jobs:
           rmdir /s /q dist 2>nul
           python -m PyInstaller --noconfirm --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
 
-      - name: Install NSIS
-        run: choco install nsis --no-progress -y
-
       - name: Build installer
+        shell: cmd /C CALL {0}
         run: |
-          New-Item -ItemType Directory -Force installer-dist | Out-Null
-          $makensisCandidates = @(
-            "${env:ProgramFiles(x86)}\NSIS\makensis.exe",
-            "${env:ProgramFiles}\NSIS\makensis.exe"
-          )
-          $makensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $makensis) {
-            Write-Error "makensis.exe was not found after installing NSIS."
-            exit 1
-          }
-          Push-Location installer
-          & $makensis "/DAPP_VERSION=$env:AUTOSNAP_VERSION" AutoSnap.nsi
-          $installerExit = $LASTEXITCODE
-          Pop-Location
-          if ($installerExit -ne 0) {
-            exit $installerExit
-          }
-          Get-ChildItem installer-dist
+          conda activate app
+          rmdir /s /q installer-dist 2>nul
+          mkdir installer-dist
+          python -m PyInstaller --noconfirm --windowed --onefile --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
+          copy dist\AutoSnap-Setup.exe installer-dist\AutoSnap-Setup.exe
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

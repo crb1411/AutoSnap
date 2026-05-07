@@ -71,7 +71,7 @@ Windows 本地打包安装器：
 scripts\windows_build_installer.bat
 ```
 
-本地打包要求安装 NSIS，并确保 `makensis.exe` 在 `PATH` 中。
+本地打包不依赖外部安装器编译器；`AutoSnap-Setup.exe` 是一个 PyInstaller bootstrap 安装器，会把应用复制到 `%LOCALAPPDATA%\Programs\AutoSnap`。
 
 ### 0A.5 v0 验收口径
 

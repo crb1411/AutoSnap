@@ -83,4 +83,4 @@ Build a Windows installer locally:
 scripts\windows_build_installer.bat
 ```
 
-This requires NSIS `makensis` on `PATH`. The output is `installer-dist\AutoSnap-Setup.exe`.
+This produces `installer-dist\AutoSnap-Setup.exe`. The installer is a PyInstaller bootstrapper that installs AutoSnap under `%LOCALAPPDATA%\Programs\AutoSnap`.

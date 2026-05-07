@@ -19,18 +19,13 @@ rmdir /s /q installer-dist 2>nul
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onedir --name AutoSnap --icon assets\autosnap.ico autosnap_launcher.py
 if errorlevel 1 exit /b 1
 
-where makensis >nul 2>nul
-if errorlevel 1 (
-  echo NSIS makensis is not installed or not on PATH.
-  echo Download it from https://nsis.sourceforge.io/Download, then rerun this script.
-  exit /b 1
-)
+echo Building bootstrap installer...
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onefile --name AutoSnap-Setup --icon assets\autosnap.ico --add-data "dist\AutoSnap;payload\AutoSnap" installer\bootstrap.py
+if errorlevel 1 exit /b 1
 
-pushd installer
-makensis AutoSnap.nsi
-set INSTALLER_EXIT=%ERRORLEVEL%
-popd
-if not "%INSTALLER_EXIT%"=="0" exit /b %INSTALLER_EXIT%
+mkdir installer-dist 2>nul
+copy /y dist\AutoSnap-Setup.exe installer-dist\AutoSnap-Setup.exe
+if errorlevel 1 exit /b 1
 
 echo.
 echo Installer built: installer-dist\AutoSnap-Setup.exe
