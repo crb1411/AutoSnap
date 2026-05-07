@@ -38,17 +38,17 @@ AutoSnap 是一个开源的**截图自动归档器**。它**不替换**你现有
 
 ## 启用 AI 标注（可选，BYOK）
 
-AutoSnap v0 默认完全不联网。如果想让它自动给截图打标签 / 写标题：
+AutoSnap 默认完全不联网。如果想让它自动给截图打标签 / 写标题：
 
-```powershell
-setx OPENAI_API_KEY "sk-..."
-setx AUTOSNAP_ENABLE_AI "1"
-setx AUTOSNAP_OPENAI_MODEL "gpt-4.1-mini"
-```
+1. 打开 AutoSnap，点顶栏 **设置** → **AI 标注** Tab
+2. 勾选 **启用 AI 标注**
+3. 在 **OpenAI API Key** 里粘贴你的密钥（`sk-...`）
+4. 模型名按需修改（默认 `gpt-4.1-mini`，因为可用模型会随时间变化）
+5. 点 **保存**——立即生效，新截图开始走 AI；想给历史截图补标注，点顶栏的 **AI 补标注**
 
-设置完环境变量后**重启** AutoSnap。模型名做成可配置是因为可用模型会随时间变化。
-
-> 你可以随时关闭 AI（删 `AUTOSNAP_ENABLE_AI` 或把它设为 `0`），关闭后基础归档和搜索完全不受影响。
+> 想关闭：回设置取消勾选 **启用 AI 标注**，保存即可。基础归档和搜索完全不受影响。
+>
+> Key 存在本地 `%APPDATA%\AutoSnap\config.json`，不会上传任何外部服务。也支持 `OPENAI_API_KEY` 环境变量作为兜底（设置面板里没填时使用）。
 
 ## 开发者快速上手
 

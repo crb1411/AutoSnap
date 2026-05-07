@@ -74,20 +74,22 @@
 
 ## 第 5 步（可选）· 启用 AI 标注
 
-默认 AutoSnap 完全离线，不会把你的截图发到任何外部服务。如果你想让它自动给截图打标签 / 写标题：
+默认 AutoSnap 完全离线，不会把你的截图发到任何外部服务。如果想让它自动给截图打标签 / 写标题：
 
-1. 准备一个 OpenAI API Key（[平台地址](https://platform.openai.com/api-keys)）
-2. 打开 PowerShell（开始菜单搜 "PowerShell"），运行：
-   ```powershell
-   setx OPENAI_API_KEY "sk-你的密钥"
-   setx AUTOSNAP_ENABLE_AI "1"
-   setx AUTOSNAP_OPENAI_MODEL "gpt-4.1-mini"
-   ```
-3. **完全退出 AutoSnap 再重启**（`setx` 设置的环境变量只对新进程生效）
-4. 之后新截图会被异步送去 AI 标注；标注失败不影响基础归档
+1. 去 OpenAI 平台准备一个 API Key：<https://platform.openai.com/api-keys>
+2. 在 AutoSnap 主窗口顶栏点 **设置（Settings）**
+3. 切到 **AI 标注** Tab
+4. 勾选 **启用 AI 标注**
+5. 在 **OpenAI API Key** 一栏粘贴你的密钥（输入框会用 `*` 遮蔽显示）
+6. 模型名按需修改（默认 `gpt-4.1-mini`，便宜、速度快）
+7. 点 **保存**——立即生效，新截图会被异步送去 AI 标注；标注失败不影响基础归档
+8. 想给已经在归档里的旧截图也补标注，点顶栏的 **AI 补标注**
 
-> 想关闭：把 `AUTOSNAP_ENABLE_AI` 设为 `0`，或者删除该环境变量。
-> 隐私顾虑：v0 是个最小实现，**不会**做敏感信息本地拦截，**也不会**给你截图打码。涉及密码、身份证、银行卡的截图请暂时不要开启 AI（v1 会加敏感拦截，参见 DESIGN §11）。
+> 关闭：回设置取消勾选 **启用 AI 标注**，保存即可。
+>
+> Key 存在哪里：本地文件 `%APPDATA%\AutoSnap\config.json`，**不会上传任何外部服务**。如果你不想存到磁盘，也可以清空设置里的 Key 字段，改用 `OPENAI_API_KEY` 环境变量——AutoSnap 会优先用设置里的 Key，没填时回退到环境变量。
+>
+> 隐私顾虑：当前版本**不会**做敏感信息本地拦截。涉及密码、身份证、银行卡的截图建议暂时不要开启 AI（后续版本会加敏感拦截，参见 [DESIGN §11](DESIGN.md)）。
 
 ---
 

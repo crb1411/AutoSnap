@@ -49,15 +49,14 @@ Default configuration location:
 
 ## Optional AI Annotation
 
-AutoSnap v0 never requires AI. To enable OpenAI annotation:
+AutoSnap never requires AI. To enable OpenAI annotation:
 
-```powershell
-setx OPENAI_API_KEY "sk-..."
-setx AUTOSNAP_ENABLE_AI "1"
-setx AUTOSNAP_OPENAI_MODEL "gpt-4.1-mini"
-```
+1. Open AutoSnap, click **Settings** in the top bar.
+2. Switch to the **AI** tab.
+3. Tick **Enable AI annotation**, paste your OpenAI API key, optionally change the model (defaults to `gpt-4.1-mini`).
+4. Click **Save**. New screenshots are annotated asynchronously; click **AI annotate backlog** to backfill existing ones.
 
-Restart AutoSnap after setting environment variables. The model name is configurable because model availability changes over time.
+The key is stored locally in `%APPDATA%\AutoSnap\config.json` and never uploaded anywhere. As a fallback, the `OPENAI_API_KEY` environment variable is used when the Settings field is empty.
 
 ## Development
 
