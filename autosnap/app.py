@@ -19,6 +19,7 @@ from .config import Settings, SettingsStore
 from .db import AutoSnapDB
 from .i18n import SUPPORTED_LANGUAGES, Translator
 from .models import ArchiveResult
+from . import theme as theme_mod
 from .tray import TrayController
 from .watcher import AutoSnapWatcher
 
@@ -53,14 +54,17 @@ class AutoSnapApp(tk.Tk):
         self.t = self.translator.t
 
         self.title(self.t("app.title"))
-        self.geometry("1060x720")
-        self.minsize(860, 560)
+        self.geometry("1100x740")
+        self.minsize(900, 600)
         icon = _icon_path()
         if icon:
             try:
                 self.iconbitmap(default=str(icon))
             except Exception:
                 pass
+
+        # Apply theme + global font BEFORE building any widgets.
+        self.palette = theme_mod.apply(self, self.settings.theme)
 
         self.archive_root = Path(self.settings.archive_dir).expanduser()
         self.archive_root.mkdir(parents=True, exist_ok=True)
@@ -95,49 +99,100 @@ class AutoSnapApp(tk.Tk):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(2, weight=1)
 
-        top = ttk.Frame(self, padding=(12, 10))
+        # ----- Top bar -----
+        top = ttk.Frame(self, padding=(16, 14, 16, 8))
         top.grid(row=0, column=0, sticky="ew")
         top.columnconfigure(99, weight=1)
 
-        self.start_btn = ttk.Button(top, text=self.t("btn.start"), command=self.start_watching)
+        # Primary action gets accent style; everything else stays default.
+        self.start_btn = ttk.Button(
+            top, text="▶  " + self.t("btn.start"), style="Accent.TButton",
+            command=self.start_watching,
+        )
         self.start_btn.grid(row=0, column=0, padx=(0, 6))
-        self.stop_btn = ttk.Button(top, text=self.t("btn.stop"), command=self.stop_watching)
-        self.stop_btn.grid(row=0, column=1, padx=(0, 6))
-        ttk.Button(top, text=self.t("btn.import"), command=self.import_folder).grid(row=0, column=2, padx=(0, 6))
-        ttk.Button(top, text=self.t("btn.open_archive"), command=lambda: self._open_path(self.archive_root)).grid(row=0, column=3, padx=(0, 6))
-        ttk.Button(top, text=self.t("btn.annotate_backlog"), command=self.annotate_backlog).grid(row=0, column=4, padx=(0, 6))
-        ttk.Button(top, text=self.t("btn.settings"), command=self.open_settings).grid(row=0, column=5, padx=(0, 6))
-        ttk.Button(top, text=self.t("btn.minimize_to_tray"), command=self._hide_to_tray).grid(row=0, column=6, padx=(0, 6))
+        self.stop_btn = ttk.Button(top, text="■  " + self.t("btn.stop"), command=self.stop_watching)
+        self.stop_btn.grid(row=0, column=1, padx=(0, 14))
 
-        search = ttk.Frame(self, padding=(12, 0, 12, 8))
+        ttk.Button(top, text="📂  " + self.t("btn.import"), command=self.import_folder).grid(row=0, column=2, padx=(0, 6))
+        ttk.Button(
+            top, text="🗂  " + self.t("btn.open_archive"),
+            command=lambda: self._open_path(self.archive_root),
+        ).grid(row=0, column=3, padx=(0, 6))
+        ttk.Button(
+            top, text="✨  " + self.t("btn.annotate_backlog"),
+            command=self.annotate_backlog,
+        ).grid(row=0, column=4, padx=(0, 14))
+
+        # Right-aligned utility cluster.
+        ttk.Button(top, text="⚙  " + self.t("btn.settings"), command=self.open_settings).grid(row=0, column=100, padx=(0, 6))
+        ttk.Button(
+            top, text="⤓  " + self.t("btn.minimize_to_tray"),
+            command=self._hide_to_tray,
+        ).grid(row=0, column=101)
+
+        # ----- Search bar -----
+        search = ttk.Frame(self, padding=(16, 0, 16, 10))
         search.grid(row=1, column=0, sticky="ew")
-        search.columnconfigure(1, weight=1)
-        ttk.Label(search, text=self.t("search.label")).grid(row=0, column=0, padx=(0, 8))
+        search.columnconfigure(2, weight=1)
+        ttk.Label(search, text="🔍", style="SearchIcon.TLabel").grid(row=0, column=0, padx=(0, 6))
+        ttk.Label(search, text=self.t("search.label")).grid(row=0, column=1, padx=(0, 10))
         self.search_var = tk.StringVar()
-        entry = ttk.Entry(search, textvariable=self.search_var)
-        entry.grid(row=0, column=1, sticky="ew")
+        entry = ttk.Entry(search, textvariable=self.search_var, font=theme_mod.font(10))
+        entry.grid(row=0, column=2, sticky="ew", ipady=4)
         entry.bind("<Return>", lambda _event: self.refresh())
-        ttk.Button(search, text=self.t("btn.refresh"), command=self.refresh).grid(row=0, column=2, padx=(8, 0))
+        ttk.Button(search, text=self.t("btn.refresh"), command=self.refresh).grid(row=0, column=3, padx=(10, 0))
 
-        body = ttk.Frame(self, padding=(12, 0, 12, 8))
+        # ----- Body (thumbnail grid) -----
+        body = tk.Frame(self, background=self.palette["bg"], bd=0, highlightthickness=0)
         body.grid(row=2, column=0, sticky="nsew")
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
 
-        self.canvas = tk.Canvas(body, borderwidth=0, highlightthickness=0)
+        self.canvas = tk.Canvas(
+            body,
+            borderwidth=0,
+            highlightthickness=0,
+            background=self.palette["bg"],
+        )
         scrollbar = ttk.Scrollbar(body, orient="vertical", command=self.canvas.yview)
-        self.grid_frame = ttk.Frame(self.canvas)
+        self.grid_frame = tk.Frame(self.canvas, background=self.palette["bg"])
         self.grid_frame.bind("<Configure>", lambda _event: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
         self.canvas_window = self.canvas.create_window((0, 0), window=self.grid_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=scrollbar.set)
         self.canvas.bind("<Configure>", self._resize_canvas_window)
-        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.canvas.grid(row=0, column=0, sticky="nsew", padx=(16, 0))
         scrollbar.grid(row=0, column=1, sticky="ns")
 
+        # Wheel scrolling on the thumbnail grid (Win/Mac/Linux).
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind_all("<Button-4>", lambda _e: self.canvas.yview_scroll(-3, "units"))
+        self.canvas.bind_all("<Button-5>", lambda _e: self.canvas.yview_scroll(3, "units"))
+
+        # ----- Status bar -----
+        status_bar = tk.Frame(self, background=self.palette["card_bg"], bd=0, highlightthickness=0)
+        status_bar.grid(row=3, column=0, sticky="ew")
+        status_bar.columnconfigure(1, weight=1)
+
+        self.status_dot = tk.Label(
+            status_bar, text="●", fg=self.palette["idle"],
+            background=self.palette["card_bg"], font=theme_mod.font(11),
+        )
+        self.status_dot.grid(row=0, column=0, sticky="w", padx=(16, 6), pady=6)
         self.status_var = tk.StringVar()
         self.status_var.set(self._status_text())
-        status = ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(12, 4))
-        status.grid(row=3, column=0, sticky="ew")
+        status = ttk.Label(status_bar, textvariable=self.status_var, style="Status.TLabel", anchor="w")
+        status.grid(row=0, column=1, sticky="ew", padx=(0, 16), pady=6)
+        self.status_bar = status_bar
+
+    def _on_mousewheel(self, event) -> None:  # type: ignore[no-untyped-def]
+        # Tk on Windows reports delta in multiples of 120; on macOS in units.
+        if event.delta == 0:
+            return
+        step = -1 if event.delta > 0 else 1
+        try:
+            self.canvas.yview_scroll(step * 3, "units")
+        except Exception:
+            pass
 
     # ----- Watching -----
 
@@ -192,37 +247,89 @@ class AutoSnapApp(tk.Tk):
         self._row_index.clear()
 
         if not rows:
-            ttk.Label(self.grid_frame, text=self.t("empty.hint"), padding=24).grid(row=0, column=0, sticky="w")
+            empty = tk.Frame(self.grid_frame, background=self.palette["bg"])
+            empty.grid(row=0, column=0, sticky="nsew", padx=40, pady=80)
+            tk.Label(
+                empty, text="📷", font=theme_mod.font(36),
+                background=self.palette["bg"], foreground=self.palette["text_muted"],
+            ).pack()
+            ttk.Label(empty, text=self.t("empty.hint"), style="EmptyHint.TLabel").pack(pady=(8, 0))
             return
 
         columns = 4
+        for col in range(columns):
+            self.grid_frame.columnconfigure(col, weight=1, uniform="cards")
+
         for idx, row in enumerate(rows):
             row_dict = dict(row)
             self._row_index[row_dict["id"]] = row_dict
-            card = ttk.Frame(self.grid_frame, padding=8, relief="ridge")
-            card.grid(row=idx // columns, column=idx % columns, sticky="nsew", padx=6, pady=6)
             image_path = self.archive_root / row_dict["archived_path"]
+
+            card = tk.Frame(
+                self.grid_frame,
+                background=self.palette["card_bg"],
+                highlightbackground=self.palette["card_border"],
+                highlightthickness=1,
+                bd=0,
+            )
+            card.grid(row=idx // columns, column=idx % columns, sticky="nsew", padx=10, pady=10)
+
+            inner = tk.Frame(card, background=self.palette["card_bg"])
+            inner.pack(fill="both", expand=True, padx=12, pady=12)
+
             thumb = self._load_thumbnail(image_path)
             if thumb is not None:
-                label = ttk.Label(card, image=thumb)
-                label.grid(row=0, column=0, sticky="n")
+                img_label = tk.Label(inner, image=thumb, background=self.palette["card_bg"])
+                img_label.pack(anchor="center")
                 self.thumbnail_refs.append(thumb)
-                self._bind_card_events(label, row_dict["id"], image_path)
+                self._bind_card_events(img_label, row_dict["id"], image_path)
+
             title = row_dict.get("title") or Path(row_dict["archived_path"]).name
-            meta = f"{row_dict.get('category', 'unsorted')} | {self._format_ms(row_dict['captured_at'])}"
-            title_lbl = ttk.Label(card, text=title, width=28, wraplength=220)
-            title_lbl.grid(row=1, column=0, sticky="w", pady=(6, 0))
-            meta_lbl = ttk.Label(card, text=meta, foreground="#555555")
-            meta_lbl.grid(row=2, column=0, sticky="w")
-            self._bind_card_events(title_lbl, row_dict["id"], image_path)
-            self._bind_card_events(meta_lbl, row_dict["id"], image_path)
-            self._bind_card_events(card, row_dict["id"], image_path)
+            category = row_dict.get("category", "unsorted")
+            captured = self._format_ms(row_dict["captured_at"])
+
+            title_lbl = tk.Label(
+                inner, text=title, wraplength=220, justify="left", anchor="w",
+                background=self.palette["card_bg"], foreground=self.palette["text"],
+                font=theme_mod.font(10, "bold"),
+            )
+            title_lbl.pack(anchor="w", fill="x", pady=(8, 2))
+
+            meta_lbl = tk.Label(
+                inner, text=f"{category}  ·  {captured}",
+                background=self.palette["card_bg"], foreground=self.palette["text_muted"],
+                font=theme_mod.font(9), anchor="w", justify="left",
+            )
+            meta_lbl.pack(anchor="w", fill="x")
+
+            for w in (card, inner, title_lbl, meta_lbl):
+                self._bind_card_events(w, row_dict["id"], image_path)
+            self._bind_card_hover(card)
 
     def _bind_card_events(self, widget, screenshot_id: str, image_path: Path) -> None:
         widget.bind("<Double-Button-1>", lambda _e, p=image_path: self._open_path(p))
         widget.bind("<Button-3>", lambda e, sid=screenshot_id, p=image_path: self._show_context_menu(e, sid, p))
         # macOS historical right-click
         widget.bind("<Control-Button-1>", lambda e, sid=screenshot_id, p=image_path: self._show_context_menu(e, sid, p))
+
+    def _bind_card_hover(self, card: tk.Frame) -> None:
+        normal = self.palette["card_border"]
+        hover = self.palette["accent"]
+
+        def on_enter(_e):
+            try:
+                card.configure(highlightbackground=hover)
+            except Exception:
+                pass
+
+        def on_leave(_e):
+            try:
+                card.configure(highlightbackground=normal)
+            except Exception:
+                pass
+
+        card.bind("<Enter>", on_enter)
+        card.bind("<Leave>", on_leave)
 
     def _show_context_menu(self, event, screenshot_id: str, image_path: Path) -> None:
         menu = tk.Menu(self, tearoff=0)
@@ -366,7 +473,14 @@ class AutoSnapApp(tk.Tk):
         ]
         if extra:
             parts.insert(0, extra)
-        return "  |  ".join(parts)
+        # Reflect watching state via the ● color in the status bar.
+        if hasattr(self, "status_dot") and self.status_dot is not None:
+            try:
+                color = self.palette["ok"] if self.watcher else self.palette["idle"]
+                self.status_dot.configure(fg=color)
+            except Exception:
+                pass
+        return "  ·  ".join(parts)
 
     @staticmethod
     def _format_ms(value: int) -> str:
@@ -505,17 +619,35 @@ class SettingsDialog(tk.Toplevel):
         self._lang_options = lang_options
         self._lang_box = lang_box
 
+        ttk.Label(general, text=self.t("settings.theme")).grid(row=3, column=0, sticky="w", pady=4)
+        theme_options = [
+            (self.t("settings.theme.light"), "light"),
+            (self.t("settings.theme.dark"), "dark"),
+        ]
+        theme_box = ttk.Combobox(
+            general,
+            state="readonly",
+            values=[label for label, _ in theme_options],
+        )
+        current_theme_label = next(
+            (lbl for lbl, code in theme_options if code == s.theme), theme_options[0][0]
+        )
+        theme_box.set(current_theme_label)
+        theme_box.grid(row=3, column=1, sticky="w", padx=6)
+        self._theme_options = theme_options
+        self._theme_box = theme_box
+
         self.tray_close_var = tk.BooleanVar(value=s.minimize_to_tray_on_close)
         ttk.Checkbutton(general, text=self.t("settings.minimize_to_tray"), variable=self.tray_close_var).grid(
-            row=3, column=0, columnspan=3, sticky="w", pady=4
+            row=4, column=0, columnspan=3, sticky="w", pady=4
         )
         self.start_in_tray_var = tk.BooleanVar(value=s.start_in_tray)
         ttk.Checkbutton(general, text=self.t("settings.start_in_tray"), variable=self.start_in_tray_var).grid(
-            row=4, column=0, columnspan=3, sticky="w", pady=4
+            row=5, column=0, columnspan=3, sticky="w", pady=4
         )
         self.start_watching_var = tk.BooleanVar(value=s.start_watching_on_launch)
         ttk.Checkbutton(general, text=self.t("settings.start_watching_on_launch"), variable=self.start_watching_var).grid(
-            row=5, column=0, columnspan=3, sticky="w", pady=4
+            row=6, column=0, columnspan=3, sticky="w", pady=4
         )
 
         # ----- Watch tab -----
@@ -602,6 +734,15 @@ class SettingsDialog(tk.Toplevel):
         if language not in SUPPORTED_LANGUAGES:
             language = "zh_CN"
 
+        # Resolve theme code
+        theme_label = self._theme_box.get()
+        theme = next(
+            (code for label, code in self._theme_options if label == theme_label),
+            self.app.settings.theme,
+        )
+        if theme not in ("light", "dark"):
+            theme = "light"
+
         new = Settings(
             archive_dir=self.archive_var.get().strip() or self.app.settings.archive_dir,
             watch_dirs=list(self.dirs_list.get(0, "end")),
@@ -613,6 +754,7 @@ class SettingsDialog(tk.Toplevel):
             poll_interval_sec=float(self.poll_var.get() or 1.5),
             process_existing_on_start=bool(self.process_existing_var.get()),
             language=language,
+            theme=theme,
             minimize_to_tray_on_close=bool(self.tray_close_var.get()),
             start_in_tray=bool(self.start_in_tray_var.get()),
             start_watching_on_launch=bool(self.start_watching_var.get()),
@@ -621,6 +763,12 @@ class SettingsDialog(tk.Toplevel):
         self.app.settings = new
         # Apply runtime-changeable bits without restart
         self.app.translator.set_language(language)
+        if theme != self.app.palette and theme in ("light", "dark"):
+            try:
+                self.app.palette = theme_mod.apply(self.app, theme)
+                self.app.refresh()
+            except Exception:
+                pass
         self.app.annotator = AnnotationService(
             api_key=new.openai_api_key or None,
             model=new.openai_model,

@@ -19,7 +19,7 @@ del /q AutoSnap.spec 2>nul
 del /q AutoSnap-Setup.spec 2>nul
 
 echo Building app payload (onedir)...
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --windowed --onedir --name AutoSnap --icon assets\autosnap.ico --add-data "assets\autosnap.ico;assets" --collect-submodules pystray --hidden-import pystray._win32 autosnap_launcher.py
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --windowed --onedir --name AutoSnap --icon assets\autosnap.ico --add-data "assets\autosnap.ico;assets" --collect-submodules pystray --hidden-import pystray._win32 --collect-all sv_ttk autosnap_launcher.py
 if errorlevel 1 exit /b 1
 if not exist "dist\AutoSnap\AutoSnap.exe" (
   echo ERROR: dist\AutoSnap\AutoSnap.exe was not produced.

@@ -46,6 +46,7 @@ class Settings:
     poll_interval_sec: float = 1.5
     process_existing_on_start: bool = False
     language: str = "zh_CN"
+    theme: str = "light"  # "light" | "dark"
     minimize_to_tray_on_close: bool = True
     start_in_tray: bool = False
     start_watching_on_launch: bool = False
