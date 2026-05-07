@@ -57,7 +57,20 @@ jobs:
       - name: Build installer
         run: |
           New-Item -ItemType Directory -Force installer-dist | Out-Null
-          iscc installer\AutoSnap.iss
+          $isccCandidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $isccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            Write-Error "ISCC.exe was not found after installing Inno Setup."
+            exit 1
+          }
+          & $iscc installer\AutoSnap.iss
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          Get-ChildItem installer-dist
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
