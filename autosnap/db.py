@@ -244,6 +244,30 @@ class AutoSnapDB:
         row = cur.fetchone()
         return int(row["n"]) if row else 0
 
+    def dashboard_stats(self) -> dict[str, int]:
+        cur = self.conn.execute(
+            """
+            SELECT
+              COUNT(*) AS total,
+              COALESCE(SUM(bytes), 0) AS bytes_total,
+              COUNT(DISTINCT strftime('%Y-%m-%d', captured_at / 1000, 'unixepoch', 'localtime')) AS active_days,
+              SUM(CASE WHEN ai_status = 'done' THEN 1 ELSE 0 END) AS ai_done,
+              SUM(CASE WHEN ai_status = 'pending' THEN 1 ELSE 0 END) AS ai_pending
+            FROM screenshots
+            WHERE deleted_at IS NULL
+            """
+        )
+        row = cur.fetchone()
+        if not row:
+            return {"total": 0, "bytes_total": 0, "active_days": 0, "ai_done": 0, "ai_pending": 0}
+        return {
+            "total": int(row["total"] or 0),
+            "bytes_total": int(row["bytes_total"] or 0),
+            "active_days": int(row["active_days"] or 0),
+            "ai_done": int(row["ai_done"] or 0),
+            "ai_pending": int(row["ai_pending"] or 0),
+        }
+
     def add_annotation(self, screenshot_id: str, annotation: Annotation) -> None:
         now = int(time.time() * 1000)
         self.conn.execute(

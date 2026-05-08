@@ -104,11 +104,82 @@ class AutoSnapApp(tk.Tk):
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=0, minsize=210)  # sidebar
         self.columnconfigure(1, weight=1)               # main content
-        self.rowconfigure(2, weight=1)                  # body row stretches
+        self.rowconfigure(3, weight=1)                  # body row stretches
+
+        # ----- Hero / product dashboard (spans both columns) -----
+        hero = tk.Frame(
+            self,
+            background=self.palette["hero_bg"],
+            highlightbackground=self.palette["hero_border"],
+            highlightthickness=1,
+            bd=0,
+        )
+        hero.grid(row=0, column=0, columnspan=2, sticky="ew", padx=16, pady=(16, 10))
+        hero.columnconfigure(0, weight=1)
+        hero.columnconfigure(1, weight=0)
+
+        hero_left = tk.Frame(hero, background=self.palette["hero_bg"])
+        hero_left.grid(row=0, column=0, sticky="nsew", padx=22, pady=18)
+
+        badge = tk.Label(
+            hero_left,
+            text=self.t("app.hero_badge"),
+            background=self.palette["accent"],
+            foreground="#FFFFFF",
+            font=theme_mod.font(9, "bold"),
+            padx=10,
+            pady=4,
+        )
+        badge.pack(anchor="w", pady=(0, 10))
+
+        tk.Label(
+            hero_left,
+            text=self.t("app.hero_title"),
+            background=self.palette["hero_bg"],
+            foreground=self.palette["accent"],
+            font=theme_mod.font(25, "bold"),
+            anchor="w",
+        ).pack(anchor="w")
+        tk.Label(
+            hero_left,
+            text=self.t("app.hero_subtitle"),
+            background=self.palette["hero_bg"],
+            foreground=self.palette["text"],
+            font=theme_mod.font(13, "bold"),
+            anchor="w",
+        ).pack(anchor="w", pady=(6, 12))
+
+        feature_row = tk.Frame(hero_left, background=self.palette["hero_bg"])
+        feature_row.pack(anchor="w")
+        feature_specs = [
+            (self.t("app.value_time"), "⏱", self.palette["accent_soft"], self.palette["accent"]),
+            (self.t("app.value_content"), "▤", self.palette["teal_soft"], self.palette["teal"]),
+            (self.t("app.value_search"), "⌕", self.palette["purple_soft"], self.palette["purple"]),
+            (self.t("app.value_archive"), "▣", self.palette["orange_soft"], self.palette["orange"]),
+        ]
+        for text, icon_text, bg, fg in feature_specs:
+            self._pill(feature_row, f"{icon_text}  {text}", bg, fg).pack(side="left", padx=(0, 8))
+
+        hero_right = tk.Frame(hero, background=self.palette["hero_bg"])
+        hero_right.grid(row=0, column=1, sticky="e", padx=(0, 18), pady=16)
+        self.stat_total_var = tk.StringVar(value="0")
+        self.stat_days_var = tk.StringVar(value="0")
+        self.stat_ai_var = tk.StringVar(value="0")
+        self.stat_storage_var = tk.StringVar(value="0 B")
+        stat_specs = [
+            (self.t("stat.total"), self.stat_total_var, self.palette["accent"]),
+            (self.t("stat.days"), self.stat_days_var, self.palette["teal"]),
+            (self.t("stat.ai"), self.stat_ai_var, self.palette["purple"]),
+            (self.t("stat.storage"), self.stat_storage_var, self.palette["orange"]),
+        ]
+        for idx, (label, var, color) in enumerate(stat_specs):
+            self._stat_card(hero_right, label, var, color).grid(
+                row=idx // 2, column=idx % 2, padx=5, pady=5, sticky="nsew"
+            )
 
         # ----- Top bar (spans both columns) -----
-        top = ttk.Frame(self, padding=(16, 14, 16, 8))
-        top.grid(row=0, column=0, columnspan=2, sticky="ew")
+        top = ttk.Frame(self, padding=(16, 0, 16, 8))
+        top.grid(row=1, column=0, columnspan=2, sticky="ew")
         top.columnconfigure(99, weight=1)
 
         # Primary action gets accent style; everything else stays default.
@@ -139,24 +210,27 @@ class AutoSnapApp(tk.Tk):
 
         # ----- Sidebar (spans search + body rows) -----
         self.sidebar = self._build_sidebar()
-        self.sidebar.grid(row=1, column=0, rowspan=2, sticky="nsew")
+        self.sidebar.grid(row=2, column=0, rowspan=2, sticky="nsew")
         self._refresh_sidebar()
 
         # ----- Search bar -----
-        search = ttk.Frame(self, padding=(16, 0, 16, 10))
-        search.grid(row=1, column=1, sticky="ew")
-        search.columnconfigure(2, weight=1)
-        ttk.Label(search, text="🔍", style="SearchIcon.TLabel").grid(row=0, column=0, padx=(0, 6))
-        ttk.Label(search, text=self.t("search.label")).grid(row=0, column=1, padx=(0, 10))
+        search = tk.Frame(self, background=self.palette["bg"], bd=0, highlightthickness=0)
+        search.grid(row=2, column=1, sticky="ew", padx=16, pady=(0, 8))
+        search.columnconfigure(1, weight=1)
+        ttk.Label(search, text=self.t("section.quick_filters")).grid(row=0, column=0, sticky="w", pady=(0, 8))
+        self.chip_frame = tk.Frame(search, background=self.palette["bg"])
+        self.chip_frame.grid(row=0, column=1, sticky="ew", padx=(12, 0), pady=(0, 8))
+
+        ttk.Label(search, text="🔍", style="SearchIcon.TLabel").grid(row=1, column=0, padx=(0, 8), sticky="w")
         self.search_var = tk.StringVar()
         entry = ttk.Entry(search, textvariable=self.search_var, font=theme_mod.font(10))
-        entry.grid(row=0, column=2, sticky="ew", ipady=4)
+        entry.grid(row=1, column=1, sticky="ew", ipady=5)
         entry.bind("<Return>", lambda _event: self.refresh())
-        ttk.Button(search, text=self.t("btn.refresh"), command=self.refresh).grid(row=0, column=3, padx=(10, 0))
+        ttk.Button(search, text=self.t("btn.refresh"), command=self.refresh).grid(row=1, column=2, padx=(10, 0))
 
         # ----- Body (thumbnail grid) -----
         body = tk.Frame(self, background=self.palette["bg"], bd=0, highlightthickness=0)
-        body.grid(row=2, column=1, sticky="nsew")
+        body.grid(row=3, column=1, sticky="nsew")
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
 
@@ -182,7 +256,7 @@ class AutoSnapApp(tk.Tk):
 
         # ----- Status bar (spans both columns) -----
         status_bar = tk.Frame(self, background=self.palette["card_bg"], bd=0, highlightthickness=0)
-        status_bar.grid(row=3, column=0, columnspan=2, sticky="ew")
+        status_bar.grid(row=4, column=0, columnspan=2, sticky="ew")
         status_bar.columnconfigure(1, weight=1)
 
         self.status_dot = tk.Label(
@@ -195,6 +269,46 @@ class AutoSnapApp(tk.Tk):
         status = ttk.Label(status_bar, textvariable=self.status_var, style="Status.TLabel", anchor="w")
         status.grid(row=0, column=1, sticky="ew", padx=(0, 16), pady=6)
         self.status_bar = status_bar
+
+    def _pill(self, parent: tk.Misc, text: str, bg: str, fg: str) -> tk.Label:
+        return tk.Label(
+            parent,
+            text=text,
+            background=bg,
+            foreground=fg,
+            font=theme_mod.font(9, "bold"),
+            padx=11,
+            pady=6,
+        )
+
+    def _stat_card(self, parent: tk.Misc, label: str, value: tk.StringVar, color: str) -> tk.Frame:
+        card = tk.Frame(
+            parent,
+            background=self.palette["card_bg"],
+            highlightbackground=self.palette["card_border"],
+            highlightthickness=1,
+            bd=0,
+            width=118,
+            height=66,
+        )
+        card.grid_propagate(False)
+        tk.Label(
+            card,
+            text=label,
+            background=self.palette["card_bg"],
+            foreground=self.palette["text_muted"],
+            font=theme_mod.font(8),
+            anchor="w",
+        ).pack(anchor="w", padx=10, pady=(9, 0))
+        tk.Label(
+            card,
+            textvariable=value,
+            background=self.palette["card_bg"],
+            foreground=color,
+            font=theme_mod.font(13, "bold"),
+            anchor="w",
+        ).pack(anchor="w", padx=10, pady=(2, 0))
+        return card
 
     def _on_mousewheel(self, event) -> None:  # type: ignore[no-untyped-def]
         # Tk on Windows reports delta in multiples of 120; on macOS in units.
@@ -406,6 +520,8 @@ class AutoSnapApp(tk.Tk):
     def refresh(self, refresh_sidebar: bool = True) -> None:
         if refresh_sidebar:
             self._refresh_sidebar()
+        self._update_dashboard_stats()
+        self._refresh_filter_chips()
         rows = self.db.search(
             self.search_var.get(),
             limit=160,
@@ -431,10 +547,34 @@ class AutoSnapApp(tk.Tk):
         for col in range(columns):
             self.grid_frame.columnconfigure(col, weight=1, uniform="cards")
 
+        grid_row = 0
+        grid_col = 0
+        current_day = None
         for idx, row in enumerate(rows):
             row_dict = dict(row)
             self._row_index[row_dict["id"]] = row_dict
             image_path = self.archive_root / row_dict["archived_path"]
+            day_label = self._day_label(row_dict["captured_at"])
+            if day_label != current_day:
+                if grid_col != 0:
+                    grid_row += 1
+                    grid_col = 0
+                current_day = day_label
+                section = tk.Frame(self.grid_frame, background=self.palette["bg"])
+                section.grid(row=grid_row, column=0, columnspan=columns, sticky="ew", padx=10, pady=(12, 2))
+                section.columnconfigure(1, weight=1)
+                tk.Label(
+                    section,
+                    text=day_label,
+                    background=self.palette["bg"],
+                    foreground=self.palette["text"],
+                    font=theme_mod.font(13, "bold"),
+                    anchor="w",
+                ).grid(row=0, column=0, sticky="w")
+                tk.Frame(section, background=self.palette["card_border"], height=1).grid(
+                    row=0, column=1, sticky="ew", padx=(12, 0)
+                )
+                grid_row += 1
 
             card = tk.Frame(
                 self.grid_frame,
@@ -443,7 +583,7 @@ class AutoSnapApp(tk.Tk):
                 highlightthickness=1,
                 bd=0,
             )
-            card.grid(row=idx // columns, column=idx % columns, sticky="nsew", padx=10, pady=10)
+            card.grid(row=grid_row, column=grid_col, sticky="nsew", padx=10, pady=10)
 
             inner = tk.Frame(card, background=self.palette["card_bg"])
             inner.pack(fill="both", expand=True, padx=12, pady=12)
@@ -458,6 +598,7 @@ class AutoSnapApp(tk.Tk):
             title = row_dict.get("title") or Path(row_dict["archived_path"]).name
             category = row_dict.get("category", "unsorted")
             captured = self._format_ms(row_dict["captured_at"])
+            category_label = self._category_label(category)
 
             title_lbl = tk.Label(
                 inner, text=title, wraplength=220, justify="left", anchor="w",
@@ -466,16 +607,77 @@ class AutoSnapApp(tk.Tk):
             )
             title_lbl.pack(anchor="w", fill="x", pady=(8, 2))
 
+            meta_row = tk.Frame(inner, background=self.palette["card_bg"])
+            meta_row.pack(anchor="w", fill="x")
+            cat_lbl = tk.Label(
+                meta_row,
+                text=category_label,
+                background=self.palette["accent_soft"] if category != "unsorted" else self.palette["orange_soft"],
+                foreground=self.palette["accent"] if category != "unsorted" else self.palette["orange"],
+                font=theme_mod.font(8, "bold"),
+                padx=7,
+                pady=2,
+            )
+            cat_lbl.pack(side="left")
             meta_lbl = tk.Label(
-                inner, text=f"{category}  ·  {captured}",
+                meta_row, text=f"  {captured}",
                 background=self.palette["card_bg"], foreground=self.palette["text_muted"],
                 font=theme_mod.font(9), anchor="w", justify="left",
             )
-            meta_lbl.pack(anchor="w", fill="x")
+            meta_lbl.pack(side="left", fill="x")
 
-            for w in (card, inner, title_lbl, meta_lbl):
+            for w in (card, inner, title_lbl, meta_row, cat_lbl, meta_lbl):
                 self._bind_card_events(w, row_dict["id"], image_path)
             self._bind_card_hover(card)
+            grid_col += 1
+            if grid_col >= columns:
+                grid_col = 0
+                grid_row += 1
+
+    def _update_dashboard_stats(self) -> None:
+        if not hasattr(self, "stat_total_var"):
+            return
+        stats = self.db.dashboard_stats()
+        self.stat_total_var.set(str(stats["total"]))
+        self.stat_days_var.set(str(stats["active_days"]))
+        self.stat_ai_var.set(str(stats["ai_done"]))
+        self.stat_storage_var.set(self._format_bytes(stats["bytes_total"]))
+
+    def _refresh_filter_chips(self) -> None:
+        if not hasattr(self, "chip_frame"):
+            return
+        for child in self.chip_frame.winfo_children():
+            child.destroy()
+
+        chips: list[tuple[str, str, int | None, str, str]] = [
+            ("__all__", self.t("sidebar.all"), self.db.total_count(), self.palette["accent_soft"], self.palette["accent"]),
+        ]
+        counts = self.db.category_counts()
+        color_cycle = [
+            (self.palette["teal_soft"], self.palette["teal"]),
+            (self.palette["purple_soft"], self.palette["purple"]),
+            (self.palette["orange_soft"], self.palette["orange"]),
+            (self.palette["accent_soft"], self.palette["accent"]),
+        ]
+        for idx, (category, count) in enumerate(counts[:6]):
+            bg, fg = color_cycle[idx % len(color_cycle)]
+            chips.append((category, self._category_label(category), count, bg, fg))
+
+        for key, label, count, bg, fg in chips:
+            text = f"{label}  {count}" if count is not None else label
+            active = key == self._current_sidebar_key
+            chip = tk.Label(
+                self.chip_frame,
+                text=text,
+                background=self.palette["accent"] if active else bg,
+                foreground="#FFFFFF" if active else fg,
+                font=theme_mod.font(9, "bold"),
+                padx=11,
+                pady=5,
+                cursor="hand2",
+            )
+            chip.pack(side="left", padx=(0, 8), pady=(0, 4))
+            chip.bind("<Button-1>", lambda _e, k=key: self._select_sidebar(k))
 
     def _bind_card_events(self, widget, screenshot_id: str, image_path: Path) -> None:
         widget.bind("<Double-Button-1>", lambda _e, p=image_path: self._open_path(p))
@@ -658,6 +860,30 @@ class AutoSnapApp(tk.Tk):
         import datetime as _dt
 
         return _dt.datetime.fromtimestamp(value / 1000).strftime("%Y-%m-%d %H:%M:%S")
+
+    def _day_label(self, value: int) -> str:
+        import datetime as _dt
+
+        day = _dt.datetime.fromtimestamp(value / 1000).date()
+        today = _dt.date.today()
+        if day == today:
+            prefix = "今天" if self.settings.language == "zh_CN" else "Today"
+        elif day == today - _dt.timedelta(days=1):
+            prefix = "昨天" if self.settings.language == "zh_CN" else "Yesterday"
+        else:
+            prefix = day.strftime("%Y-%m-%d")
+        return f"{prefix} · {day:%m/%d}"
+
+    @staticmethod
+    def _format_bytes(value: int) -> str:
+        units = ["B", "KB", "MB", "GB", "TB"]
+        amount = float(value)
+        for unit in units:
+            if amount < 1024 or unit == units[-1]:
+                if unit == "B":
+                    return f"{int(amount)} {unit}"
+                return f"{amount:.1f} {unit}"
+            amount /= 1024
 
     @staticmethod
     def _open_path(path: Path) -> None:
