@@ -80,6 +80,12 @@ class AutoSnapApp(tk.Tk):
         self._row_index: dict[str, dict] = {}
         self._tray: TrayController | None = None
 
+        # Sidebar / filter state
+        self.current_category: str | None = None
+        self.favorites_only: bool = False
+        self._current_sidebar_key: str = "__all__"
+        self._sidebar_buttons: dict[str, tuple] = {}
+
         self._build_ui()
         self.refresh()
         self.after(500, self._drain_events)
@@ -96,12 +102,13 @@ class AutoSnapApp(tk.Tk):
     # ----- UI construction -----
 
     def _build_ui(self) -> None:
-        self.columnconfigure(0, weight=1)
-        self.rowconfigure(2, weight=1)
+        self.columnconfigure(0, weight=0, minsize=210)  # sidebar
+        self.columnconfigure(1, weight=1)               # main content
+        self.rowconfigure(2, weight=1)                  # body row stretches
 
-        # ----- Top bar -----
+        # ----- Top bar (spans both columns) -----
         top = ttk.Frame(self, padding=(16, 14, 16, 8))
-        top.grid(row=0, column=0, sticky="ew")
+        top.grid(row=0, column=0, columnspan=2, sticky="ew")
         top.columnconfigure(99, weight=1)
 
         # Primary action gets accent style; everything else stays default.
@@ -130,9 +137,14 @@ class AutoSnapApp(tk.Tk):
             command=self._hide_to_tray,
         ).grid(row=0, column=101)
 
+        # ----- Sidebar (spans search + body rows) -----
+        self.sidebar = self._build_sidebar()
+        self.sidebar.grid(row=1, column=0, rowspan=2, sticky="nsew")
+        self._refresh_sidebar()
+
         # ----- Search bar -----
         search = ttk.Frame(self, padding=(16, 0, 16, 10))
-        search.grid(row=1, column=0, sticky="ew")
+        search.grid(row=1, column=1, sticky="ew")
         search.columnconfigure(2, weight=1)
         ttk.Label(search, text="🔍", style="SearchIcon.TLabel").grid(row=0, column=0, padx=(0, 6))
         ttk.Label(search, text=self.t("search.label")).grid(row=0, column=1, padx=(0, 10))
@@ -144,7 +156,7 @@ class AutoSnapApp(tk.Tk):
 
         # ----- Body (thumbnail grid) -----
         body = tk.Frame(self, background=self.palette["bg"], bd=0, highlightthickness=0)
-        body.grid(row=2, column=0, sticky="nsew")
+        body.grid(row=2, column=1, sticky="nsew")
         body.columnconfigure(0, weight=1)
         body.rowconfigure(0, weight=1)
 
@@ -168,9 +180,9 @@ class AutoSnapApp(tk.Tk):
         self.canvas.bind_all("<Button-4>", lambda _e: self.canvas.yview_scroll(-3, "units"))
         self.canvas.bind_all("<Button-5>", lambda _e: self.canvas.yview_scroll(3, "units"))
 
-        # ----- Status bar -----
+        # ----- Status bar (spans both columns) -----
         status_bar = tk.Frame(self, background=self.palette["card_bg"], bd=0, highlightthickness=0)
-        status_bar.grid(row=3, column=0, sticky="ew")
+        status_bar.grid(row=3, column=0, columnspan=2, sticky="ew")
         status_bar.columnconfigure(1, weight=1)
 
         self.status_dot = tk.Label(
@@ -193,6 +205,158 @@ class AutoSnapApp(tk.Tk):
             self.canvas.yview_scroll(step * 3, "units")
         except Exception:
             pass
+
+    # ----- Category sidebar -----
+
+    def _build_sidebar(self) -> tk.Frame:
+        sidebar = tk.Frame(
+            self,
+            background=self.palette["card_bg"],
+            highlightbackground=self.palette["card_border"],
+            highlightthickness=0,
+            bd=0,
+            width=210,
+        )
+        sidebar.grid_propagate(False)
+
+        title = tk.Label(
+            sidebar,
+            text=self.t("sidebar.title"),
+            background=self.palette["card_bg"],
+            foreground=self.palette["text_muted"],
+            font=theme_mod.font(9, "bold"),
+            anchor="w",
+        )
+        title.pack(fill="x", padx=14, pady=(14, 6))
+
+        self.sidebar_items = tk.Frame(sidebar, background=self.palette["card_bg"])
+        self.sidebar_items.pack(fill="both", expand=True, padx=6, pady=(0, 8))
+        return sidebar
+
+    def _refresh_sidebar(self) -> None:
+        if not hasattr(self, "sidebar_items"):
+            return
+        for w in self.sidebar_items.winfo_children():
+            w.destroy()
+        self._sidebar_buttons = {}
+
+        total = self.db.total_count()
+        self._add_sidebar_row("__all__", self.t("sidebar.all"), total)
+
+        fav_count = self.db.favorite_count()
+        if fav_count > 0:
+            self._add_sidebar_row("__favorites__", self.t("sidebar.favorites"), fav_count)
+
+        counts = self.db.category_counts()
+        unsorted_pair = next(((c, n) for c, n in counts if c == "unsorted"), None)
+        others = [(c, n) for c, n in counts if c != "unsorted"]
+
+        if (others or unsorted_pair) and (fav_count > 0 or others):
+            sep = tk.Frame(self.sidebar_items, background=self.palette["card_border"], height=1)
+            sep.pack(fill="x", padx=12, pady=6)
+
+        for cat, n in others:
+            self._add_sidebar_row(cat, self._category_label(cat), n)
+
+        if unsorted_pair:
+            cat, n = unsorted_pair
+            if others:
+                sep2 = tk.Frame(self.sidebar_items, background=self.palette["card_border"], height=1)
+                sep2.pack(fill="x", padx=12, pady=6)
+            self._add_sidebar_row(cat, self._category_label(cat), n)
+
+        if total == 0:
+            hint = tk.Label(
+                self.sidebar_items,
+                text=self.t("sidebar.empty_hint"),
+                background=self.palette["card_bg"],
+                foreground=self.palette["text_muted"],
+                font=theme_mod.font(9),
+                wraplength=180,
+                justify="left",
+                anchor="w",
+            )
+            hint.pack(fill="x", padx=10, pady=(8, 0))
+
+        self._highlight_sidebar()
+
+    def _category_label(self, category: str) -> str:
+        label = self.t(f"category.{category}")
+        # Translator returns the key itself when missing
+        if label.startswith("category."):
+            return category
+        return label
+
+    def _add_sidebar_row(self, key: str, label: str, count: int) -> None:
+        row = tk.Frame(self.sidebar_items, background=self.palette["card_bg"], cursor="hand2")
+        row.pack(fill="x", pady=1)
+        name_lbl = tk.Label(
+            row, text=label,
+            background=self.palette["card_bg"],
+            foreground=self.palette["text"],
+            font=theme_mod.font(10),
+            anchor="w",
+        )
+        name_lbl.pack(side="left", fill="x", expand=True, padx=(10, 6), pady=6)
+        count_lbl = tk.Label(
+            row, text=str(count),
+            background=self.palette["card_bg"],
+            foreground=self.palette["text_muted"],
+            font=theme_mod.font(9),
+        )
+        count_lbl.pack(side="right", padx=(0, 10))
+
+        for w in (row, name_lbl, count_lbl):
+            w.bind("<Button-1>", lambda _e, k=key: self._select_sidebar(k))
+            w.bind("<Enter>", lambda _e, k=key: self._sidebar_hover(k, True))
+            w.bind("<Leave>", lambda _e, k=key: self._sidebar_hover(k, False))
+
+        self._sidebar_buttons[key] = (row, name_lbl, count_lbl)
+
+    def _sidebar_hover(self, key: str, hovering: bool) -> None:
+        if key == self._current_sidebar_key:
+            return
+        widgets = self._sidebar_buttons.get(key)
+        if not widgets:
+            return
+        bg = self.palette["bg"] if hovering else self.palette["card_bg"]
+        for w in widgets:
+            try:
+                w.configure(background=bg)
+            except Exception:
+                pass
+
+    def _select_sidebar(self, key: str) -> None:
+        self._current_sidebar_key = key
+        if key == "__all__":
+            self.current_category = None
+            self.favorites_only = False
+        elif key == "__favorites__":
+            self.current_category = None
+            self.favorites_only = True
+        else:
+            self.current_category = key
+            self.favorites_only = False
+        self._highlight_sidebar()
+        self.refresh(refresh_sidebar=False)
+
+    def _highlight_sidebar(self) -> None:
+        accent = self.palette["accent"]
+        for k, (row, name_lbl, count_lbl) in self._sidebar_buttons.items():
+            selected = (k == self._current_sidebar_key)
+            bg = accent if selected else self.palette["card_bg"]
+            fg = "#FFFFFF" if selected else self.palette["text"]
+            sub = "#E5F0FB" if selected else self.palette["text_muted"]
+            for w in (row, name_lbl, count_lbl):
+                try:
+                    w.configure(background=bg)
+                except Exception:
+                    pass
+            try:
+                name_lbl.configure(foreground=fg)
+                count_lbl.configure(foreground=sub)
+            except Exception:
+                pass
 
     # ----- Watching -----
 
@@ -239,8 +403,15 @@ class AutoSnapApp(tk.Tk):
 
     # ----- Refresh / display -----
 
-    def refresh(self) -> None:
-        rows = self.db.search(self.search_var.get(), limit=160)
+    def refresh(self, refresh_sidebar: bool = True) -> None:
+        if refresh_sidebar:
+            self._refresh_sidebar()
+        rows = self.db.search(
+            self.search_var.get(),
+            limit=160,
+            category=self.current_category,
+            favorites_only=self.favorites_only,
+        )
         for child in self.grid_frame.winfo_children():
             child.destroy()
         self.thumbnail_refs.clear()

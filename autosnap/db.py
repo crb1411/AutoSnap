@@ -129,38 +129,68 @@ class AutoSnapDB:
         cur = self.conn.execute("SELECT * FROM screenshots WHERE sha256 = ?", (sha256,))
         return cur.fetchone()
 
-    def latest(self, limit: int = 120) -> list[sqlite3.Row]:
+    def latest(
+        self,
+        limit: int = 120,
+        *,
+        category: str | None = None,
+        favorites_only: bool = False,
+    ) -> list[sqlite3.Row]:
+        clauses = ["s.deleted_at IS NULL"]
+        params: list = []
+        if category:
+            clauses.append("s.category = ?")
+            params.append(category)
+        if favorites_only:
+            clauses.append("s.is_favorite = 1")
+        where = " AND ".join(clauses)
         cur = self.conn.execute(
-            """
+            f"""
             SELECT s.*, a.title, a.summary, a.tags_json, a.ocr_text
             FROM screenshots s
             LEFT JOIN annotations a ON a.screenshot_id = s.id
-            WHERE s.deleted_at IS NULL
+            WHERE {where}
             ORDER BY s.captured_at DESC
             LIMIT ?
             """,
-            (limit,),
+            (*params, limit),
         )
         return list(cur.fetchall())
 
-    def search(self, keyword: str, limit: int = 120) -> list[sqlite3.Row]:
+    def search(
+        self,
+        keyword: str,
+        limit: int = 120,
+        *,
+        category: str | None = None,
+        favorites_only: bool = False,
+    ) -> list[sqlite3.Row]:
         keyword = keyword.strip()
         if not keyword:
-            return self.latest(limit)
+            return self.latest(limit, category=category, favorites_only=favorites_only)
+
+        extra_clauses = []
+        extra_params: list = []
+        if category:
+            extra_clauses.append("s.category = ?")
+            extra_params.append(category)
+        if favorites_only:
+            extra_clauses.append("s.is_favorite = 1")
+        extra_sql = ("AND " + " AND ".join(extra_clauses)) if extra_clauses else ""
 
         if self._fts_available:
             try:
                 cur = self.conn.execute(
-                    """
+                    f"""
                     SELECT s.*, a.title, a.summary, a.tags_json, a.ocr_text
                     FROM search_fts f
                     JOIN screenshots s ON s.id = f.screenshot_id
                     LEFT JOIN annotations a ON a.screenshot_id = s.id
-                    WHERE search_fts MATCH ? AND s.deleted_at IS NULL
+                    WHERE search_fts MATCH ? AND s.deleted_at IS NULL {extra_sql}
                     ORDER BY bm25(search_fts), s.captured_at DESC
                     LIMIT ?
                     """,
-                    (self._fts_query(keyword), limit),
+                    (self._fts_query(keyword), *extra_params, limit),
                 )
                 return list(cur.fetchall())
             except sqlite3.OperationalError:
@@ -168,11 +198,11 @@ class AutoSnapDB:
 
         like = f"%{keyword}%"
         cur = self.conn.execute(
-            """
+            f"""
             SELECT s.*, a.title, a.summary, a.tags_json, a.ocr_text
             FROM screenshots s
             LEFT JOIN annotations a ON a.screenshot_id = s.id
-            WHERE s.deleted_at IS NULL
+            WHERE s.deleted_at IS NULL {extra_sql}
               AND (
                 s.archived_path LIKE ?
                 OR s.category LIKE ?
@@ -184,9 +214,35 @@ class AutoSnapDB:
             ORDER BY s.captured_at DESC
             LIMIT ?
             """,
-            (like, like, like, like, like, like, limit),
+            (*extra_params, like, like, like, like, like, like, limit),
         )
         return list(cur.fetchall())
+
+    def category_counts(self) -> list[tuple[str, int]]:
+        cur = self.conn.execute(
+            """
+            SELECT category, COUNT(*) AS n
+            FROM screenshots
+            WHERE deleted_at IS NULL
+            GROUP BY category
+            ORDER BY n DESC, category ASC
+            """
+        )
+        return [(row["category"], row["n"]) for row in cur.fetchall()]
+
+    def favorite_count(self) -> int:
+        cur = self.conn.execute(
+            "SELECT COUNT(*) AS n FROM screenshots WHERE deleted_at IS NULL AND is_favorite = 1"
+        )
+        row = cur.fetchone()
+        return int(row["n"]) if row else 0
+
+    def total_count(self) -> int:
+        cur = self.conn.execute(
+            "SELECT COUNT(*) AS n FROM screenshots WHERE deleted_at IS NULL"
+        )
+        row = cur.fetchone()
+        return int(row["n"]) if row else 0
 
     def add_annotation(self, screenshot_id: str, annotation: Annotation) -> None:
         now = int(time.time() * 1000)
